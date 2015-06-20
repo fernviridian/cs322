@@ -1,0 +1,9 @@
+// A little sample program, in concrete syntax
+int x = 1;
+
+void main() {
+    while (x < 10) {
+        print x;
+        x = x + 1;
+    }
+}

@@ -1,0 +1,8 @@
+void main(){
+  int i = 10;
+  foo();
+}
+
+void foo(){
+  print i;
+}

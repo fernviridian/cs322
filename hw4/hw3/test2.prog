@@ -1,0 +1,10 @@
+void main() {
+   print 1;
+}
+
+void foo(int x, int y) {
+  print (((x + y) + (x + y)) + ((x + y) + (x + y)));
+/*
+      + (((x + y) + (x + y)) + ((x + y) + (x + y)));
+*/
+}

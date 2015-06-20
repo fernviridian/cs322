@@ -1,0 +1,123 @@
+diff --git a/322/hw1/DemoComp/HW1/Target.java b/322/hw1/DemoComp/HW1/Target.java
+index e59ec83..1e39de9 100644
+--- a/322/hw1/DemoComp/HW1/Target.java
++++ b/322/hw1/DemoComp/HW1/Target.java
+@@ -124,6 +124,26 @@ class Cond extends Code {
+   }
+ }
+ 
++class NotT extends Code {
++  private Reg reg;
++  private Code next;  
++  NotT(Reg reg, Code next){
++    this.reg = reg;
++    this.next = next;
++  }
++
++  void print(){
++    System.out.println("  " + reg + " <- ![" + reg + "]");
++    next.print();
++  }
++
++  Block run(Memory mem){
++    reg.setBool(!reg.getBool());
++    return next.run(mem);
++  }
++
++}
++
+ class Load extends Code {
+   private Reg reg;
+   private String name;
+@@ -186,7 +206,6 @@ class Immed extends Code {
+     return next.run(mem);
+   }
+ }
+-
+ class Op extends Code {
+   private Reg r, x, y;
+   private char op;
+@@ -223,13 +242,81 @@ class Op extends Code {
+                  break;
+       case '*' : r.set(x.get() * y.get());
+                  break;
+-      case '!' : r.setBool(!(x.getBool()));
+-                 break;
+     }
+     return next.run(mem);
+   }
+ }
+ 
++class LTET extends Code{
++  private Reg x;
++  private Reg y;
++  private Code next;
++  private Reg r;
++
++  LTET(Reg r, Reg x, Reg y, Code next){
++    this.r = r;
++    this.x = x;
++    this.y = y;
++    this.next = next;
++  }
++
++  void print(){
++    System.out.println(" " + r + " <- " + x + " <= " + y);
++    next.print();
++  }
++
++  Block run(Memory mem){
++    r.setBool(x.get() <= y.get());
++    return next.run(mem);
++  }
++}
++
++class EvenT extends Code {
++  private Reg derp;
++  private Code next;
++
++  EvenT(Reg derp, Code next){
++    this.derp = derp;
++    this.next = next;
++  }
++
++  void print(){
++    System.out.println("  " + derp + " <- EV[" + derp +"]");
++    next.print();
++  }
++
++  Block run(Memory mem){
++    boolean result = false;
++    if(derp.get()%2 == 0){
++      result = true;
++    }
++    derp.setBool(result);
++    return next.run(mem);
++  }
++  
++}
++
++class HalveT extends Code{
++  private Reg reg;
++  private Code next;
++
++  HalveT(Reg reg, Code next){
++    this.reg = reg;
++    this.next = next;
++  }
++
++  void print(){
++    System.out.println("  " + reg + " <- HV[" + reg + "]");
++    next.print();
++  }
++
++  Block run(Memory mem){
++    reg.set(reg.get()/2);
++    return next.run(mem);
++  }
++
++}
++
+ class PCode extends Code {
+   private Reg reg;
+   private Code next;

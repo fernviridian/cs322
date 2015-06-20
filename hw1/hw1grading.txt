@@ -1,0 +1,95 @@
+--------------------------------------------------------------------------
+CS322 Languages and Compiler Design II            Homework 1 Grading Guide
+--------------------------------------------------------------------------
+
+**** PRELIMINARY DRAFT VERSION ****
+
+Maximum possible score for this assignment: 50 points
+
+--------------------------------------------------------------------------
+Question 1: (multiplication, not, <=, even, halve)
+--------------------------------------------------------------------------
+Grading Guide:
+
+  For each of multiply, not, <=, even, halve:
+  - suitable abstract syntax for the new construct, plus
+    a suitable definition for show/print functions:           [1pt]
+  - a valid definition of the eval() method for the new
+    construct:                                                [1pt]
+  - a working implementation of compileTo, including an
+    explanation of the code generation strategy that was
+    used and any modifications that were made to the
+    Target.java file:                                         [2pts]
+  This makes a maximum of 20 points.
+
+  Note that, so long as the requested operation is implemented correctly,
+  the choice between implementing everything in the source language, or
+  doing something that requires a new feature in the target language,
+  will not have any impact on how the solution is scored.
+
+  An additional 5 points for evidence of testing:
+  - evidence of effective testing for each of the five constructs
+    (by constructing and running programs that make use of the
+    new abstract syntax classes)                              [2pts]
+  - checking that the interpreter gives the correct results   [1pt]
+  - checking that the compiled code produces the same
+    value when it is executed as the interpreted code.        [1pt]
+  - testing the specific examples given in the question for
+    the halve and even constructs.                            [1pt]
+  This makes a maximum of 5 points for testing.
+
+  If a student only implements (or tests) a subset of the five
+  constructs described in this question, then the points for
+  testing will be reduced accordingly.
+
+  Note that some credit for testing can be obtained as a result of
+  test runs carried out in answer to Question 2, so long as the
+  details above are addressed explicitly in the submitted solution.
+
+Total possible points for the whole question: 25
+
+--------------------------------------------------------------------------
+Question 2: Sample program
+--------------------------------------------------------------------------
+Grading Guide:
+
+- for a valid abstract syntax tree diagram               [4 points]
+
+- for constructing a runnable program that builds the abstract
+  syntax tree for the program in the question            [4 points]
+
+- For running tests and making appropriate observations about
+  the output, both to confirm that the correct tree was
+  constructed, and that the compiler and interpreter produce
+  the same result                                        [2 points]
+
+Total possible points for the whole question: 10
+
+--------------------------------------------------------------------------
+Question 3:
+--------------------------------------------------------------------------
+Grading Guide:
+
+- For each *distinct* opportunity that you identify for improving the
+  generated code (up to a maximum of three):
+  - Identifying and describing a problem                    [3 points]
+  - Explaining how you think it might be improved           [2 point]
+  As such, the total possible score for this question is
+  15 =  3 * (3 + 2) points.  If you identify more than three
+  opportunities ... great, but sorry, no extra points :-(
+
+If you have chosen different implementations for the operations that
+were described in Question 1, then you will likely have a different
+target code fragment when you start this question, and the opportunities
+for optimization that you find may be different.  You will not be
+penalized if your generated target code contains fewer than three
+opportunities for optimization, provided that your implementations of
+the operations in Question 1 were correct.  For example, if your code
+only provides two opportunities (i.e., if I am unable to highlight a
+third for you), then I will award you 4 points for the third (missing)
+optimization.  Note, however that this is very unlikely to happen in
+practice!
+
+Total possible points for the whole question: 15
+
+------------------------------------------------------------------------

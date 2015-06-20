@@ -1,0 +1,69 @@
+Complete program is:
+    t = 0;
+    x = 6;
+    y = 7;
+    while ((0 < x)) {
+      if (not(even(x))) {
+        t = (t + y);
+      } else {
+        t = t;
+      }
+      y = (y + y);
+      x = halve(x);
+    }
+    print t;
+Running on an empty memory:
+Output: 42
+Compiling:
+Entry point is at L6
+L0:
+  r9 <- 0
+  r1 <- [x]
+  r1 <- r9<r1
+  r1 -> L4, L5
+
+L1:
+  r4 <- [y]
+  r3 <- [y]
+  r3 <- r4+r3
+  [y] <- r3
+  r2 <- [x]
+  r2 <- HV[r2]
+  [x] <- r2
+  goto L0
+
+L2:
+  r7 <- [t]
+  r6 <- [y]
+  r6 <- r7+r6
+  [t] <- r6
+  goto L1
+
+L3:
+  r8 <- [t]
+  [t] <- r8
+  goto L1
+
+L4:
+  r5 <- [x]
+  r5 <- EV[r5]
+  r5 <- ![r5]
+  r5 -> L2, L3
+
+L5:
+  r0 <- [t]
+  print r0
+  stop
+
+L6:
+  r12 <- 0
+  [t] <- r12
+  r11 <- 6
+  [x] <- r11
+  r10 <- 7
+  [y] <- r10
+  goto L0
+
+Running on an empty memory:
+Output: 42
+Done!

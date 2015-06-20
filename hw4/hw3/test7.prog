@@ -1,0 +1,6 @@
+void main() {
+   print square(square(3) + square(4));
+}
+int square(int x) {
+   return x * x;
+}

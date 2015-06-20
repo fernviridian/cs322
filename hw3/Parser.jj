@@ -1,0 +1,645 @@
+//- CS 321 Languages and Compiler Design I ----------------------------
+//  Homework 3: Sample solution and notes
+
+// This file contains a solution to the hw3-parsing assignment as well
+// as some fairly extensive notes documenting how the solution works.
+// Of course, we draw heavily on material from the labs in Weeks 3 and
+// 4 and the lectures in Weeks 4 and 5 on parsing.
+
+// The goal of this assignment was to build a parser for a simple, but
+// realistic programming language that is implemented using JavaCC.
+// This problem can be solved in many different ways, so do not be
+// surprised if your own solution differs in some ways from what is
+// presented here.  Indeed, it would be suspicious indeed if your
+// solution looked exactly like mine! :-)
+
+// We begin with the entry point to the parser that was provided in
+// the Template.jj file for FunAST:
+
+PARSER_BEGIN(Parser)
+import ast.*;
+
+public class Parser {
+  public static void main(String[] args) {
+     new Parser(System.in);
+     try {
+       Defn[] program = Top();
+       new IndentOutput(System.out).indent(program);
+     } catch (ParseException e) {
+       System.out.println("Invalid syntax at ("
+                          + token.beginColumn + ","
+                          + token.beginLine + "), "
+                          + token.image);
+     } catch (TokenMgrError e) {
+       System.out.println(e.getMessage());
+     }
+  }
+}
+PARSER_END(Parser)
+
+//- Expressions -------------------------------------------------------
+
+// The set of expressions in our language is built from identifiers
+// and integer literals using a set of operators whose precedence is
+// captured by the following table.  (The same table was given in the
+// assignment as part of the description of Expr, except for the line
+// at the top that corresponds to assignment, which was introduced in
+// Assign):
+
+//   =                     Assignment, groups to the right
+//   ||                    Logical or, groups to the right
+//   &&                    Logical and, groups to the right
+//   <, <=, >, >=, ==, !=  Comparison operators, nonassociative
+//   +, -                  Additive operators, group to the left
+//   *, /                  Multiplicative operators, group to the left
+//   parentheses           Used to specify explicit order of operations
+
+// We use one nonterminal for each row in the table above.  As described
+// in the slides, there are standard patterns that we can use for left-,
+// right-, and non-associative operators:
+//
+//       right associative   nonassociative     left associative
+//         E -> A OP E         E -> A OP A        E -> E + A
+//         E -> A              E -> A             E -> A
+//
+// In each of these examples, E and A are the nonterminals for adjacent
+// rows in the table above, with E being lower precedence (i.e., earlier
+// in the table) than A.  As discussed in labs, we can translated these
+// in to compact JavaCC grammars by applying left factoring to the right
+// and non associative cases, and by eliminating left recursion for the
+// left associative case, resulting in the following general rules:
+//
+//       right associative   nonassociative     left associative
+//         E -> A (OP E)?      E -> A (OP A)?     E -> A (OP A)*
+
+// Applying these patterns leads to the following definitions:
+
+Expr Expr(): { Expr e; } {    // A LOOKAHEAD(2) is needed here because
+  ( LOOKAHEAD(2)              // assignments and LOrs can both start with
+    e=Assignment()            // an identifier.  But we can distinguish
+  | e=LOr() )                 // between them by looking at the next
+  { return e; }               // token, which is "=", if and only if the
+}                             // expression is an assignment.
+
+Expr LOr(): { Expr e, f; } {  // Logical or groups to the right:
+  e=LAnd() ("||" f=LOr() { e = new LOr(e, f); })?
+  { return e; }
+}
+
+Expr LAnd(): { Expr e, f; } { // Logical and groups to the right:
+  e=Comp() ("&&" f=LAnd() { e = new LAnd(e, f); })?
+  { return e; }
+}
+
+Expr Comp(): { Expr e, f; } { // Comparisons are nonassociative:
+  e=Sum() ("<"  f=Sum() { e = new Lt (e, f); }
+          |"<=" f=Sum() { e = new Lte(e, f); }
+          |">"  f=Sum() { e = new Gt (e, f); }
+          |">=" f=Sum() { e = new Gte(e, f); }
+          |"==" f=Sum() { e = new Eql(e, f); }
+          |"!=" f=Sum() { e = new Neq(e, f); })?
+  { return e; }
+}
+
+Expr Sum(): { Expr e, f; } {  // Additive operations group to the left:
+  e=Prod() ( ("+" f=Prod() {e = new Add(e, f); })
+           | ("-" f=Prod() {e = new Sub(e, f); }) )*
+  { return e; }
+}
+
+Expr Prod(): { Expr e, f; } { // Multiplicatives group to the left:
+  e=Atom() ( ("*" f=Atom() {e = new Mul(e, f); })
+           | ("/" f=Atom() {e = new Div(e, f); }) )*
+  { return e; }
+}
+
+// All remaining forms of expression fit in to the Atom nonterminal
+// that is described by the next function.  This includes
+// parenthesized expressions, identifiers, and integer literals.
+//
+// Note that this is also the appropriate place to insert the rules
+// for parsing a function call: if we had tried, instead to add
+// the rule for calls as an extra rule in our Expr function, for
+// example, then we would not be able to use function calls as
+// arguments to any of the operators, unless those calls were
+// enclosed in parentheses.  (For example, it would be necessary to
+// write (f(x))+(g(x)) instead of just f(x)+g(x).)
+//
+// Once again, we need a LOOKAHEAD(2) so that we can distinguish
+// between function calls and simple identifiers.  Both of those
+// constructs start with an <IDENT> token, but only the former can
+// (and must) be followed by an "(" token, which is why a lookahead
+// of two is enough to distinguish between these cases.
+
+Expr Atom(): { Expr e; Token t; } {
+  ( "(" e=Expr() ")"
+  | "-" e=Atom() { e = new UMinus(e); }
+  | LOOKAHEAD(2)
+    e=Call()
+  | t=<IDENT>    { e = new Id(t.image); }
+  | t=<INTLIT>   { e = new IntLit(Integer.parseInt(t.image)); }
+  | t=<FLOATLIT> { e = new FloatLit(Float.parseFloat(t.image)); })
+  { return e; }
+}
+
+// We have broken out the rules for parsing assignments and calls in to
+// separate functions.  This has two benefits.  First, it will allow us
+// to reuse these functions later when we define the syntax of
+// statements, without having to duplicate the productions from our
+// grammar.  In addition, it allows us to specify more precise return
+// types for these two functions, indicating, not just that they return
+// some form of Expr value, but rather that they specifically return an
+// Assign and a Call value, respectively.  Again, this will be useful
+// when we come to the grammar for statements, because we can only build
+// ExprStmt values for certain types of expression.  (Fortunately, both
+// Assign and Call are included in that ...) These are nice properties,
+// which is why I have chosen to illustrate them here.  But it was not
+// actually necessary to use these tricks in your solution: a simple
+// alternative would have been to repeat the two productions in each of
+// the places where they were needed.  (Please ask me if it's not clear
+// what that means!)
+
+Assign Assignment(): { Token t; Expr e; } {
+  t=<IDENT> "=" e=Expr()
+  { return new Assign(t.image, e); }
+}
+
+Call Call(): { Token t; Expr[] args; } {
+  t=<IDENT> "(" args=Args() ")"
+  { return new Call(t.image, args); }
+}
+
+// The grammar for Call above references a production for Args, which
+// it uses to parse an array of zero or more argument values in a
+// function call.  We will present the definition of that function
+// later in this file when we discuss formal parameters, which uses
+// exactly the same approach/structure.
+
+// So that just about wraps things up for ExprAST and AssignAST!
+
+//- Statements --------------------------------------------------------
+
+// As described in the assignment text, there are several different
+// forms of statement, all of which are captured as alternatives in
+// the following parsing function:
+
+Stmt Stmt(): { Expr e=null; Stmt s1, s2 = null; } {
+
+  ";"                                 // empty statements
+  { return new Empty(); }
+
+| s1=Block()                          // blocks
+  { return s1; }
+
+| "if" "(" e=Expr() ")" s1=Stmt()     // if statements
+          (LOOKAHEAD(1) "else" s2=Stmt())?
+  { return new If(e, s1, s2); }
+
+| "while" "(" e=Expr() ")" s1=Stmt()  // while statements
+  { return new While(e, s1); }
+
+| "do" s1=Stmt() "while" "(" e=Expr() ")" ";" // do while loops
+  { return new DoWhile(s1, e); }
+
+| s1=ForLoop()                        // for loops
+  { return s1; }
+
+| "break" ";"                         // break statements
+  { return new Break(); }
+
+| "print" e=Expr() ";"                // print statements
+  { return new Print(e); }
+
+| "return" (e=Expr())? ";"            // return statements
+  { return new Return(e); }
+
+| s1=InitStmt()                       // initialization statements
+  { return s1; }
+}
+
+InitStmt InitStmt() : { InitStmt s1; } {
+  s1=ExprStmt() ";"                   // expression statements
+  { return s1; }
+
+| s1=Locals()                         // local variable declarations
+  { return s1; }
+}
+
+Stmt ForLoop(): { StmtExpr init=null;
+                  Expr     test=null;
+                  StmtExpr step=null;
+                  Stmt     body; } {
+  "for" "(" [init=StmtExpr()] ";"
+            [test=Expr()]     ";"
+            [step=StmtExpr()] ")" body=Stmt()
+  { return new For(init, test, step, body); }
+}
+
+// The alternatives in the code above are listed in the same order as
+// the descriptions in the assignment text, following the concrete
+// syntax that was described in each case.  We have captured the
+// appropriate syntax for easy cases (empty, if, while, print, and
+// return) directly as part of this grammar.  For blocks, expression
+// statements, and locals, however, a little more work is needed, and
+// so we break these pieces out as separate functions.
+
+// Blocks:
+// -------
+
+// The easiest of those is the case for blocks.  And the reason it is
+// "easy" is because the required code was included in the template
+// for StmtAST!  But perhaps it is still worth reflecting on how these
+// functions work.  The Block function itself just expects the open and
+// close brace symbols that mark the start and end of the block with a
+// sequence of zero or more statements in between:
+
+Stmt Block(): { Stmt[] stmts; } {
+  "{" stmts=Stmts(0) "}"
+  { return new Block(stmts); }
+}
+
+// The Stmts() function is more interesting because it has a parameter
+// that specifies how many statements have been read "so far" in the
+// current block.  This is a trick that we first saw in Step 08 of the
+// Week 3 lab (aka javacctour), and the value of soFar is useful because
+// it helps us to figure out the size of the array that we will need to
+// hold all of the statement objects that have been parsed.
+
+Stmt[] Stmts(int soFar): { Stmt s; Stmt[] stmts; } {
+  (s=Stmt() stmts=Stmts(soFar+1)
+    { stmts[soFar]=s; return stmts; }
+  | { return new Stmt[soFar]; })
+}
+
+// Stripping away the Java code here, the underlying grammar that we
+// are working with is: Stmts -> (Stmt Stmts | ), which could also be
+// presented by a pair of productions:
+//
+//      Stmts -> Stmt Stmts    // one or more statements
+//      Stmts ->               // zero statements
+//
+// You should recognize this as an example of the way we would have
+// dealt with something of the form Stmt* as part of a transformation
+// to eliminate left recursion.  In other words, this corresponds to
+// a production Stmts -> Stmt* that you might have reasonably used in
+// the Stmt step of the assignment before you started to wonder about
+// adding abstract syntax trees in StmtAST.
+
+// Now when we add the Java code back in, the right hand side of the
+// production becomes (s=Stmt() stmts=Stmts(soFar+1) {C1} | {C2}).
+// Here, C1 is code the captures the first statement object that was
+// parsed and saves it in the array stmts that contains all of the
+// following statements.  C2, on the other hand, takes care of
+// allocating space for the array when we reach the end of the list
+// inside a block, at which point we know that the array should have
+// precisely soFar elements, but we will have to rely on the preceding
+// recursive calls to Stmt to fill in the individual array entries.
+
+// Expression statements:
+// ----------------------
+
+// Although the ExprStmt and StmtExpr names are confusingly similar, it
+// is actually quite easy to deal with this part of the grammar given
+// what we have already done.  The trick is to remember that any
+// StmtExpr (i.e., an Assign or Call expression) can be used as an
+// ExprStmt (i.e., as a statment) by passing the AST for the expression
+// as an argument to the ExprStmt constructor.  Having already defined
+// functions for parsing both assignments and calls, we can implement
+// the ExprStmt parsing function directly as follows:
+
+ExprStmt ExprStmt(): { StmtExpr e; } {
+  e=StmtExpr()
+  { return new ExprStmt(e); }
+}
+
+StmtExpr StmtExpr() : { StmtExpr e; } {
+  ( LOOKAHEAD(2)
+    e=Assignment()
+  | e=Call())
+  { return e; }
+}
+
+// The only slight trick here is that we need to specify a LOOKAHEAD(2).
+// But JavaCC will point that out for us automatically, and it is easy
+// to see why this is necessary:  The assignment expression p = 1 and
+// the call expression p(1) both start with an identifier, but the
+// parser can easily distinguish between them if it looks beyond the
+// first token for either an "=" symbol or else for an "(".
+
+// Local variable declarations:
+// ----------------------------
+
+// A local variable declaration begins with a type and ends with a
+// semicolon.  In between, it requires a list of one or more "variable
+// introductions" separated by commas.
+
+Locals Locals(): { Type t; VarIntro[] vs; } {
+  t=Type() vs=VarIntros(0) ";"
+  { return new Locals(t, vs); }
+}
+
+// The code for parsing types was given in the StmtAST Template,
+// and is a just a simple alternative:
+
+Type Type(): { } {
+  ( "int"     { return Type.INT; }
+  | "double"  { return Type.DOUBLE; }
+  | "boolean" { return Type.BOOLEAN; })
+}
+
+// But what about the variable introductions?  Parsing a single
+// variable introduction---either just a variable name, or else
+// a variable name together with an initializing expression---is
+// straightforward.  Your initial grammar for this might have
+// looked something like the following:
+//
+//   VarIntro -> <IDENT>               // just names a variable
+//   VarIntro -> <IDENT> "=" Expr()    // name and initial value
+//
+// After left factoring and the addition of code to construct the
+// appropriate VarIntro or InitVarIntro objects, we obtain the
+// following:
+
+VarIntro VarIntro(): { Token t; Expr e; } {
+  t=<IDENT>
+    ("=" e=Expr() { return new InitVarIntro(t.image, e); }
+    |             { return new VarIntro(t.image); })
+}
+
+// Note that left factoring wasn't strictly necessary here; we could
+// have used another LOOKAHEAD(2) here to help our parser look beyond
+// the common <IDENT> prefix and check for the following "=" that
+// distinguishes an InitVarIntro.  But it is nice to avoid using
+// LOOKAHEAD when possible, and as we'll see soon, there are also times
+// when left factoring is the only viable option ...
+
+// Now we know to read a single variable introduction, it's time to
+// build the VarIntros() function that will read an array with multiple
+// entries.  We'll use the same basic "soFar" trick that was described
+// previously for Blocks.  But this time we have a slightly different
+// grammar to work with.  Whereas a Block can contain "zero or more
+// statements" (without explicit separators), a list of VarIntros is
+// required to contain at least one VarIntro, and each entry in the
+// list must be separated from the others by a comma.  (On stylistic
+// grounds, we would probably not want to allow empty declarations
+// like "int;" or declarations without commas like "int x y;".)  As
+// you think about the kind of grammar that is needed here, you will
+// likely come up with something like this:
+//
+//    VarIntros -> VarIntro ("," VarIntro)*
+//
+// Or, translating that into recursive form (which is necessary here
+// to use the "soFar" trick):
+//
+//    VarIntros -> VarIntro "," VarIntros   // more than one VarIntro
+//    VarIntros -> VarIntro                 // exactly one VarIntro
+//
+// After left factoring, we get:
+//
+//    VarIntros -> VarIntro ("," VarIntros | )
+//
+// [Aside: Returning briefly to an earlier point, no matter how large a
+// value of N we chose, it would not be possible to use a LOOKAHEAD(N)
+// annotation to distinguish beween the two productions in the previous
+// grammar.  The reason for this is that a single VarIntro could, in
+// theory, take any number of tokens: as a pathological example, for any
+// value of N, we could construct a VarIntro of the form x = (...(1)...)
+// with N open parenthese, and N close parenthese, for a total length of
+// 2N+2 tokens.  Technically speaking, JavaCC does have a different
+// LOOKAHEAD mechanism that could be used in situations like this.  But
+// (a) we haven't ever discussed it, and (b) it is unnecessary given the
+// fact that left factoring is very easy in this case.]
+//
+// But back to VarIntros ... taking the grammar above, we can insert
+// some Java code to capture the array of variable introductions that
+// is parsed:
+
+VarIntro[] VarIntros(int soFar): { VarIntro v; VarIntro[] vs; } {
+  v=VarIntro() ("," vs=VarIntros(soFar+1)
+              | { vs = new VarIntro[soFar+1]; })
+  { vs[soFar] = v; return vs; }
+}
+
+// We start be reading the initial variable introduction and saving
+// its AST in the variable v.  Then we look for a comma, indicting
+// that there are more VarIntros in this list, which we capture in the
+// variable vs.  At this point, we have seen one more VarIntro (the
+// value in v) than had been seen "so far" when we started, which is
+// why the recursive call to VarIntros uses soFar+1 as its argument.
+// On the other hand, if there is no comma, then we have reached the
+// end of the list and can construct an empty array to store the
+// (soFar+1) VarIntro objects that have been seen in this list.
+// Either way, when we get to the last line of the function, the
+// variable vs holds an array containing all of the following VarIntro
+// values, and we just need to save the additional VarIntro v that we
+// saw at the start of the call and then return the array.  There's
+// quite a lot going on in those few lines of code!
+
+// But that just about wraps things up for StmtAST!
+
+//- Programs ----------------------------------------------------------
+
+// Now we are ready for some "Fun"!  And in fact this final stage will
+// be quite a bit easier now that we have some of the examples from what
+// has gone before to draw on.
+
+// Complete programs comprise a sequence of zero or more definitions.
+// (One could quibble with the decision to include programs that contain
+// no definitions: how useful could such programs be in practice?  But
+// the code that was supplied in the template allows this, so it is
+// easier to go with that for now.  Perhaps static analysis will deal
+// with this indirectly by insisting that every program contains a main
+// function ...)  Note that the approach used here is exactly the same
+// method that we used to parse lists of statements inside blocks; all
+// that changes are the names of the types involved (Defn and Defn[]
+// instead of Stmt and Stmt[]) and, for their mnemonic value, the names
+// of local variables:
+
+Defn[] Top(): { Defn[] program; } {
+  program=Program(0) <EOF>
+  { return program; }
+}
+
+Defn[] Program(int soFar): { Defn d; Defn[] program; } {
+  ( d=Defn() program=Program(soFar+1)
+    { program[soFar] = d; return program; }
+  | { return new Defn[soFar]; })
+}
+
+// We have relied on a function called Defn() to parse a single
+// definition, which could be either a global variable definition or a
+// function definition.  This can be coded easily enough as a simple
+// alternative, although we will require a LOOKAHEAD(3) because we need
+// to consider three tokens to distinguish between a variable definition
+// like "int x=...;" and a function definition like "int x(...) ...".
+
+Defn Defn(): { Defn d; } {
+  ( LOOKAHEAD(3)
+    d=Globals()
+  | d=Function())
+  { return d; }
+}
+
+// Global variable declarations are particularly easy to parse now: we
+// can reuse almost all of the code for local variable declarations, the
+// only real difference being that we must end by constructing a Globals
+// object (which is a kind of Defn) rather than a Locals object (which
+// is a kind of Stmt):
+
+Defn Globals(): { Type t; VarIntro[] vs; } {
+  t=Type() vs=VarIntros(0) ";"
+  { return new Globals(t, vs); }
+}
+
+// Function defintions begin with the return type (or "void" for any
+// function that does not return a result), followed by the function
+// name and a list of formal parameters.  The last component of a
+// function definition is the body, which should be a statement block:
+
+Defn Function(): { Type t; Token t1; Formal[] formals; Stmt body; } {
+  t=RetType() t1=<IDENT> "(" formals=Formals() ")" body=Block()
+  { return new Function(t, t1.image, formals, body); }
+}
+
+// We can parse the return type of a function by reusing the previous
+// Type() parsing function but throwing an extra test for a "void"
+// function that does not return a value:
+
+Type RetType(): { Type t; } {
+  ( t=Type()
+  | "void" { t = null; } )
+  { return t; }
+}
+
+// The last tricky step in this assignment has to do with parsing the
+// list of formal parameters, which provides us another variant of the
+// problems that we've seen previously where a parsing function is
+// expected to return an array of values.  The code that we used
+// previously to parse a comma-separated list of VarIntro values in a
+// local declaration provides a good model here: the structure in the
+// following code is exactly the same as what we saw previously; only
+// the names have changed.
+
+Formal[] Formals1(int soFar): { Formal f; Formal[] formals; } {
+  f=Formal() ( "," formals=Formals1(soFar+1) {}
+             | { formals = new Formal[soFar+1]; })
+  { formals[soFar] = f; return formals; }
+}
+
+// The problem now is that this definition only allows lists that have
+// *one or more* entries in them: this is why we used the suffix "1" on
+// the above parsing function ... but we would also like to handle an
+// empty list of parameters for use in function definitions of the form
+// "int f() {...}".  The easiest way to handle this is to have the
+// parser consider two alternatives when it looks for the parameters to
+// the call.  If the parser finds a non-empty array of formal
+// parameters, then it it takes the first alternative and returns that
+// array as its result.  Otherwise, in the second alternative, our parser
+// does not consume any input, and instead constructs and returns a zero
+// length array of formal parameters:
+
+Formal[] Formals(): { Formal[] formals; } {
+  ( formals=Formals1(0) | { formals=new Formal[0]; })
+  { return formals; }
+}
+
+// Examples like this can test your eyesight and your understanding of
+// JavaCC syntax: in particular, make sure you distinguish between the
+// parts of the above rule inside {...} braces (embedded Java code) and
+// the parts inside (...) parentheses (which are just for grouping).
+
+// Now that we have the skeleton of code to parse a non-empty list of
+// formal parameters, we just need to add code for reading a single,
+// formal parameter specification.  As indicated in the assignment
+// text, a formal parameter ``takes the form "type varname" and
+// specifies the type and name of an input to the function'':
+
+Formal Formal(): { Type t; Token t1; } {
+  t=Type() t1=<IDENT>
+  { return new Formal(t, t1.image); }
+}
+
+// The only remaining detail left is to complete the description of
+// parsing for function calls by specifiying how the Args() function,
+// used previously in the definition of Call(), should handle argument
+// lists.  We have delayed that until now because it follows exactly
+// the same pattern as we have just seen for formal parameters.  (This
+// is a very good thing: it would probably be a very confusing language
+// design if function calls and function definitions used fundamentally
+// different syntax ...).  To see the parallels here, be sure to compare
+// the following definitions of Args() and Args1() with those given
+// previously for Formals() and Formals1():
+
+Expr[] Args(): { Expr[] args; } {
+  ( args=Args1(0) | { args=new Expr[0]; })
+  { return args; }
+}
+
+Expr[] Args1(int soFar): { Expr e; Expr[] args; } {
+  e=Expr() ( "," args=Args1(soFar+1) {}
+           | { args = new Expr[soFar+1]; })
+  { args[soFar] = e; return args; }
+}
+
+// And now we are done with FunAST!
+
+//- Lexical Rules -----------------------------------------------------
+//
+// The description of lexical rules appeared the first part of the
+// assignment text (in the "Tokens" section), but we will put the code
+// for this at the end of the file.  This reflects the necessary
+// practice in systems like JavaCC and jflex of putting more general
+// lexical rules (such as those for identifiers) after other, more
+// specific rules for tokens (such as keywords that would also match
+// the identifier rules).
+
+// The assignment specifies that:
+//
+// ``Spaces, tabs, new lines and carriage returns are treated as
+//   whitespace and can be used to separate or arrange lexemes
+//   (using indentation, for example) as appropriate.
+//   C++/Java-style comments are supported, including both one line
+//   comments (introduced by "//") and non-nesting, bracketed
+//   comments (that begin with "/*" and then end at the first "*/").''
+//
+// It is very easy to satisfy these requirements, because they are the
+// same as the ones we used in Lab 3, and so we can use the same code
+// that we used there:
+
+SKIP : {
+  " "
+| "\t"
+| "\n"
+| "\r"
+| <"//" (~["\n","\r"])* ("\n" | "\r" | "\r\n")>
+| <"/*" (~["*"])* ("*" | ~["*","/"] (~["*"])* "*")* "/">
+}
+
+// For other tokens, the assignment specifies that:
+// 
+// ``Identifiers should start with an alphabetic character (i.e., a-z),
+//   either upper or lower case, followed by a sequence of zero or more
+//   alphanumeric characters (i.e., either letters or digits 0-9).
+// 
+//   Integer literals are written using a sequence of digits and are
+//   always interpreted in decimal notation.  (For example: 10, 010,
+//   and 0010, are all interpreted as representing the number ten.)''
+//
+// These descriptions are easy to capture as JavaCC regular expressions:
+
+TOKEN : {
+  <IDENT      : <ALPHA> (<ALPHANUM>)* >
+| <INTLIT     : (<NUM>)+ >
+| <#ALPHA     : ["a"-"z"] | ["A"-"Z"] >
+| <#NUM       : ["0"-"9"] >
+| <#ALPHANUM  : <ALPHA> | <NUM> >
+| <FLOATLIT   : (<NUM>)+ "." (<NUM>)+ >
+}
+
+// Although you could define codes for other tokens, the assignment
+// text points out that this is not necessary: instead, we have just
+// introduced tokens for keywords and punctuation, etc., earlier in
+// this file, as needed, by writing the corresponding lexemes between
+// double quotes, as in "while", "+', or ",".
+
+//---------------------------------------------------------------------

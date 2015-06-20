@@ -1,0 +1,21 @@
+int x=1;
+int y=2;
+
+void main() {
+  print x + y;
+}
+
+int foo(int z) {
+  return z + y;
+}
+
+int bar(int a, int b) {
+  return a * x + b;
+}
+
+int baz(int a, int b) {
+  int l;
+  int r = a * x;
+  return r + b;
+}
+

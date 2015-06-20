@@ -1,0 +1,124 @@
+------------------------------------------------------------------
+Class Hierarchy Information:
+
+Most of the classes in the ast directory are used to represent
+abstract syntax trees.  In many cases, knowing how the classes are
+organized in terms of inheritance hierarcies can help in getting a
+good understanding of how the code is structured so that you can
+navigate around it more easily.
+
+For example, the Defn class represents definitions (the trailing
+asterisk after the name indicates that it is an abstract class)
+and it has to subclasses, corresponding to global definitions and
+function definitions, respectively:
+
+  Defn* --+-- Globals                    "type varintros;"
+          |
+          +-- Function                   "T f(fp1,...) { ... }"
+
+The set of classes that are used to represent statements are
+described by the following diagram:
+
+  Stmt* --+-- Empty                      ";"
+          |
+          +-- Block                      "{ stmt1 ... stmtn }"
+          |
+          +-- If                         "if (test) ifTrue [else ifFalse]"
+          |
+          +-- While                      "while (test) body"
+          |
+          +-- DoWhile                    "do body while (test);"
+          |
+          +-- Print                      "print exp;"
+          |
+          +-- Return                     "return [exp];"
+          |
+          +-- InitStmt* --+-- ExprStmt   "expr;"
+                          |
+                          +-- Locals     "type varintros;"
+
+Both global and local variable declarations (Globals and Locals in
+the above) contain arrays of VarIntro objects.  The basic VarIntro
+class just specifies a variable name, while InitVarIntro adds an
+expression whose value can be used to initialized the associated
+variable:
+
+  VarIntro                               "x"
+      |
+      +-- InitVarIntro                   "x = exp"
+
+The classes that are used to provide an abstract syntax for
+expressions constitute the largest hierarchy, as illustrated in
+the following diagram.  Note that there is no concrete syntax for
+the casts because these constructs do not appear in source
+programs.
+
+  Expr --+-- Id
+         |
+         +-- IntLit
+         |
+         +-- FloatLit
+         |
+         +-- CastExpr --+-- IntToDouble
+         |              |
+         |              +-- DoubleToInt
+         |
+         +-- StmtExpr --+-- Assign                    "lhs = rhs"
+         |              |
+         |              +-- Call                      "name (args)"
+         |
+         +-- UMinus                                   "- exp"
+         |
+         +-- BinExpr ---+-- ArithBinExpr --+-- Add    "left + right"
+                        |                  |
+                        |                  +-- Sub    "left - right"
+                        |                  |
+                        |                  +-- Mul    "left * right"
+                        |                  |
+                        |                  +-- Div    "left / right"
+                        |
+                        +-- RelBinExpr ----+-- Lt     "left < right"
+                        |                  |
+                        |                  +-- Lte    "left <= right"
+                        |                  |
+                        |                  +-- Gt     "left > right"
+                        |                  |
+                        |                  +-- Gte    "left >= right"
+                        |                  |
+                        |                  +-- Eql    "left == right"
+                        |                  |
+                        |                  +-- Neq    "left != right"
+                        |
+                        +-- LogBinExpr ----+-- LAnd   "left && right"
+                                           |
+                                           +-- LOr    "left || right"
+
+The other classes that you will find in the ast directory do not
+fit in to hierarchies like these.  As a brief summary:
+
+Abstract syntax classes:
+
+  Formal - represents a formal parameter in a function definition.
+
+  Type - provides a representation for basic types like
+     Type.BOOLEAN, Type.INT, and TYPE.DOUBLE.
+
+Used during static analysis:
+
+  Context - used to provide information about the context in which
+     individual definitions, statements, and expressions appear.
+
+  FunctionEnv - is used to build environments that map function
+     names (i.e., String values) to function definitions (i.e.,
+     Function values).
+
+  TypeEnv - is used to build environments that map variable names
+     (i.e., String values) to types (i.e., objects of the Type
+     class).
+
+Used for output:
+
+   IndentOutput - used to support display of abstract syntax trees
+      using indented text.
+
+------------------------------------------------------------------

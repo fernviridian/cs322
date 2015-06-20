@@ -1,0 +1,188 @@
+------------------------------------------------------------------------
+CS322 Languages and Compiler Design II                        Homework 2
+------------------------------------------------------------------------
+
+Background:
+-----------
+This homework is intended to familiarize you with the use of x86-64
+assembly language.  You should complete this exercise using the AT&T
+syntax; even if you know the "Intel syntax", you should not use it here
+because that won't help you to develop familiarity with the notation
+that we will be using in class.  Also note that we are not expecting
+substantial experience with assembly language programming beyond what we
+have covered in class/labs and the supporting materials that have been
+provided on D2L (including the collection of videos and review slides).
+We are also not expecting you to use special x86-64 instructions; you
+should be able to complete this homework using only the x86-64
+instructions that we have shown you in the supporting materials.  If you
+feel tempted to use additional instructions that you know already, or if
+find something in Intel documentation that was not covered in the
+supporting materials, then check with me first; it probably isn't
+necessary.  Treat this as if you are working for a company that has very
+strict (and narrow) coding guidelines when it comes to x86-64
+programming!
+
+Arrays:
+-------
+In these exercises, we will be working with arrays of 32 bit int values.
+Each int value, of course, takes four bytes when stored in memory.
+Unlike the examples that we covered in labs, we will represent an array
+containing n numbers using a block of (n+1) words.  The first word in
+each such array contains the number, n, of elements in the rest of the
+array.  For example, a 4-element array containing the numbers 0, 1, 2,
+and 3, would be stored in memory as a sequence of 5 words:
+
+    { 4, 0, 1, 2, 3 }
+
+This representation (unlike the alternative approach that we saw in the
+lab examples) allows us to include zero elements in an array.  For
+example, we can represent an array with 7 zeros in it using the
+following sequence:
+
+    { 7, 0, 0, 0, 0, 0, 0, 0 }
+
+Note, however, that the length information at the front of the array
+must be strictly observed.  Thus the following two sequences of words
+both represent the same array, even though we have written more elements
+down than the length that is stated at the front in each case:
+
+    { 2, 5, 6, 7, 8 }
+    { 2, 5, 6, 8, 7 }
+
+Problems:
+---------
+For each of the following tasks, you are asked to write a fragment of
+x86-64 code that takes the starting addresses of two images, represented
+as above, in the rdi and rsi registers as its input and returns a single
+integer as its result in eax.
+
+The six specific programs that you should implement for this homework
+assignment are as follows:
+
+Program 1: The result should be the total value of the numbers in the
+	   two arrays, not including the length fields at the start of
+	   each array.  The two arrays themselves should not be
+	   modified.
+
+Program 2: The result should be the total number of zeros in the first
+	   array plus the total number of nonzeros in the second array.
+
+Program 3: The result should be 1 and the contents of the first array
+	   should be reversed.  The second array should not be changed.
+
+Program 4: If the two input arrays have the same length, then the
+	   contents of the two arrays should be swapped and the return
+	   result should be 0.  If the two arrays have different
+	   lengths, then the return result should be the absolute value
+	   of the difference between their lengths.
+
+Program 5: If the two input arrays have the same length, then the
+	   contents of the two arrays should be compared in pairwise
+	   fashion, and the elements of the arrays should be swapped so
+	   that the first array contains the minimum value of each pair
+	   and the second array contains the maximum value.  For
+	   example, if the two input arrays are:
+
+               { 5, 0, 1, 2, 3, 4}
+               { 5, 4, 3, 2, 1, 0}
+
+           then the output arrays will be:
+
+               { 5, 0, 1, 2, 1, 0}
+               { 5, 4, 3, 2, 3, 4}
+
+	   If the two arrays are of equal length, then the return result
+	   should be the dot (or inner) product of the numbers in the
+	   two arrays.  (i.e., the sum of the products of each
+	   corresponding pair of numbers in the array.)  For the example
+	   above, the return value would be 10 (i.e., 0*4 + 1*3 + 2*2 +
+	   3*1 + 4*0).
+
+	   If the two arrays have different lengths, then the return
+	   result should be the sum of the lengths of the two arrays.
+
+Program 6: The overall effect of this program, viewing the contents
+	   of the two arrays as a single sequence of numbers, should be
+	   to "rotate" the values forward, shifting each number towards
+	   the start of the array and moving the number that was
+	   originally at the front to the back.  Note that the lengths
+	   of the two arrays should not be changed during this process.
+	   For example, the contents of two input arrays:
+
+                { 4, 0, 1, 2, 3 }  and   { 3, 4, 5, 6 }
+
+	   can be viewed as representing the following sequence of
+	   numbers (comprising the numbers from the first array followed
+	   by the numbers from the second):
+
+                0, 1, 2, 3, 4, 5, 6, 7.
+
+	   After rotating this sequence of numbers as specified, we
+	   obtain the following new sequence:
+
+                1, 2, 3, 4, 5, 6, 7, 0.
+
+	   And so, for this particular case the contents of the two
+	   arrays after rotation should be as follows:
+
+                { 4, 1, 2, 3, 4 }  and   { 3, 5, 6, 0 }.
+
+	   Be sure that your program works correctly even if one or both
+	   of the input arrays is empty.  For example, a rotation of the
+	   two arrays:
+
+                { 4, 0, 1, 2, 3 }  and   { 0 }
+
+	   should produce the following output arrays:
+
+		{ 4, 1, 2, 3, 0 }  and   { 0 }.
+
+	   In all cases, the return result (i.e., the value in eax at
+	   the end of your program) should be the total number of
+	   elements in the two arrays.  (So, for the two examples shown
+           above, the return results would be 7 and 4, respectively.)
+
+Specific instructions for developing and testing your solutions on
+the computer (which is required to obtain full credit) are provided
+in the README file that is part of the materials that you can download
+for this assignment.
+
+And, of course, please ask (on the D2L discussions, during office
+hours, in class, in person, ...) if you get stuck and need further
+help or clarification!
+
+How to prepare for submission:
+------------------------------
+You should prepare your solutions to each of the problems above as
+carefully commented assembly language source files with names
+program1.s, program2.s, ..., program6.s to match the problem numbers.
+In each case, you should use an appropriate template (linux.s or
+mac.s) as your starting point.
+
+Of course, you should test your solutions carefully, but you are not
+expected to include details of your testing with your submission.
+Instead, an additional test program will be distributed two days before
+submission deadline, and you will be asked to provide the output from
+that test program as part of your submission.  Detailed instructions on
+this aspect of the assignment will be provided when the test program is
+distributed.  If you have followed the instructions described above,
+however, then it will be easy for you to generate the submission
+materials just by running a simple script (that we will provide).
+
+You should plan to complete the development and testing of your
+solution before the testing program is released.  Do not assume that
+you will be able to use our testing program as a substitute for your
+own testing; it is not intended for that purpose and will almost
+certainly not meet your needs.  The reason for including a two day
+delay between the release of the testing program and the final
+deadline is simply to provide you with a little flexibility in
+finding time to run the testing program and submit your results.
+
+Minimum passing grade:
+----------------------
+All six programs will be equally weighted, and you will need to have
+completed at least one of them (or equivalent in aggregate score) to
+satisfy the minimum grade requirement (i.e., to avoid an F or X for
+this assignment).
+
+------------------------------------------------------------------------

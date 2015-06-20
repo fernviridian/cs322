@@ -1,0 +1,11 @@
+As    - Abstract syntax (source)
+Ps    - Printing (source)
+Is    - Interpreter (source)
+At    - Abstract syntax (target)
+Pt    - Printing (target)
+It    - Interpreter (target)
+C     - Compiler
+B     - Bytecode
+Demo  - Demonstration (includes full front end)
+BDemo - Demonstation (combining B and Demo)
+

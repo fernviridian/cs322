@@ -1,0 +1,210 @@
+------------------------------------------------------------------------
+CS322 Languages and Compiler Design II                        Homework 3
+------------------------------------------------------------------------
+
+This homework exercise builds on the material that was covered in the
+Week 5 lecture on assembly code generation, and the Week 6 lab on
+runtime organization and functions.  This assignment uses a modified
+version of the materials for the Week 6 lab.  Although the names are the
+same, the content is (slightly) different, so be sure that you are using
+the right version.  You can distinguish the two versions from one
+another in several ways.  The homework version, for example, includes
+this file (hw3.txt) as well as a sample output file, sample.s, and a
+simple runtime library, runtime.c, that is written in C.
+
+NOTE: This version of the AsmGen materials can be compiled and executed
+on any machine with a suitable implementation of Java.  However, the
+generated assembly code files are intended to be compiled and executed
+on a Linux machine (specifically, on the machines in the Linuxlab).
+Other platforms, including both Mac OS and Windows, are NOT SUPPORTED.
+
+Warmup:
+-------
+As in the Week 6 lab, the supplied code does not include implementations
+of the compilation schemes for unary minus (in ast/UMinus.java) or
+do...while loops (in ast/DoWhile.java).  Be sure that you know how to
+complete and test these examples before proceeding.
+
+The version of AsmGen that is provided here eliminates the need for a
+special "print" instruction, and instead compiles a statement of the
+form "print e;" into a sequence of instructions that first evaluates the
+expression e, and then calls a function, "print", to take care of
+printing the value on the terminal.  The "print" function is defined in
+a small "runtime library" called runtime.c.  In particular, this means
+that you can now try using AsmGen to compile simple programs in to
+assembly language and then use gcc to assemble those programs, together
+with code from runtime.c, in to a working executable.  For example, you
+can use the following commands to compile and run test0.prog:
+
+   java AsmGen < test0.prog
+   gcc -o test0 runtime.c out.s
+   ./test0
+
+If you take a peek at the code in runtime.c, you will find that it
+contains a simple main() function that, in turn, calls Xmain(); the
+latter is the name that AsmGen uses for the compiled version of the main
+function in test0.prog.  Adding the extra "X" prefix to the names of the
+global variables and functions in test0.prog like this is a simple (but
+not foolproof) way to avoid conflicts when multiple entities, written in
+different languages, share the same name.  In a similar way, and for
+similar reasons, you will also see that the aforementioned "print"
+function is actually called "Xprint" in runtime.c.  As a final note,
+although it is obviously possible to use Strings like "Xmain" or
+"Xprint" in the Java code for AsmGen, the preferred way to generate such
+strings is by using expressions of the form a.name("main"),
+a.name("print"), or similar, where "a" is an object of type Assembly.
+This ensures consistency in the way that entities are named and
+referenced, and would also make it possible to switch, quickly, from the
+"X" prefix naming convention to some other alternative, if necessary.
+
+If you've read, completed, and understood all of the above, then you are
+ready to move on!
+
+
+Question 1: [15 points]
+-----------
+The new version of the AsmGen code includes support for a form of "for"
+loop of the form:
+
+   for (init; test; step) body
+
+Each of the init, test, and step portions of a "for" statement is
+optional, meaning that the programmer can choose to leave that portion
+of the statement blank.  If they are included, however, then init and
+step portions must be statement expressions (i.e., assignments or calls)
+while the test must be a boolean valued expression.  The body can be any
+statement (it will often be a block, comprising a list of multiple
+statements, but this is not required).  The following examples illustrate
+the concrete syntax for "for" loops that is recognized by the supplied
+parser.  Note that only the first example includes all four components:
+
+   for (i=1; i<10; i=i+1) print i;
+
+   for (i=1; i<10; ) { print i; i=i+1; }
+
+   for (;;) { print 1; }
+
+The abstract syntax class that is used to represent "for" loops is
+called "For", and you should inspect its source code in ast/For.java
+for details of the field names, etc.  You will find that it includes
+implementations of code for printing indented ASTs as well as type
+checking, but the implementations for code generation are stubs that
+will trigger a runtime error if a user attempts to compile a program
+that includes a for loop.
+
+Your task in this question is to complete the implementation of "For".
+Your submission for this part of the assignment should be a carefully
+commented listing of your implementation [10 points] and a thoughtful
+description of the steps that you took to verify that your solution
+was working correctly [5 points].
+
+Question 2: [15 points]
+-----------
+The version of AsmGen that was supplied in the labs does not include
+code to initialize global variables to the correct values; instead, all
+global variables are declared using the assembly language ".long"
+directive with an initial value of zero.  We cannot assume that the
+expressions that are used to initialize global variables will all be
+simple integer literals.  For example, the following is a valid source
+program:
+
+  int x = 2;
+  int y = x*x;
+  void main() {
+    print y;
+  }
+
+Note that the right hand side of the definition for y is not an integer
+literal, and not a valid assembly language expression.  As a result, we
+cannot expect just to copy the initial value expressions directly from
+the source code in to the generated assembly code.
+
+One option would be to use an interpreter to evaluate the initial value
+expressions at compile time and then use those results directly as
+arguments to the ".long" directive.  Instead, for this question, your
+task is to arrange for the *generated code* to include an extra function
+definition, called initGlobals(), that will set all of the global
+variables to the correct initial values.  For the example above, the
+initGlobals function, if written directly in the source language, might
+look something like this:
+
+  void initGlobals() {
+    x = 2;
+    y = x*x;
+  }
+
+However, for the purposes of this exercise, you are required to generate
+appropriate target code *without* constructing any new abstract syntax
+tree structures.
+
+As starting points for this task, you are encouraged to review the
+implementation of the compile() method in ast/Defn.java as well as the
+implementation of the compileFunction() method in ast/Function.java.
+
+As mentioned in the Warmup section of this assignment, in this version
+of AsmGen, all global variables and functions are assigned names
+beginning the with the capital letter X in the hopes of avoiding
+confusion with other names.  Specifically, for example, in the assembly
+code that your solution to this question will generate, the
+"initGlobals" function will actually appear as "XinitGlobals".  As
+before, you are strongly encouraged to use an expression such as
+a.name("initGlobals") to generate the output string in this case rather
+than using the "XinitGlobals" string directly.
+
+Your submission for this part of the assignment should be a carefully
+commented listing of your implementation [10 points] and a thoughtful
+description of the steps that you took to verify that your solution was
+working correctly [5 points].
+
+Question 3: [20 points]
+-----------
+The materials that are supplied for this assignment include a sample
+assembly language output file called "sample.s".  This particular file
+was produced by compiling a source file "sample.prog" with the supplied
+version of AsmGen.  Unfortunately, through a sad and unlikely chain of
+events, the original source file has since been lost, leaving "sample.s"
+as the only record of that program.
+
+Your task in this question is to study the code in "sample.s" and then
+reconstruct the original source code for "sample.prog", or at least as
+close as you can get to that.  To accomplish this, you will need to use
+your understanding of x86-64 assembly language and of the conventions of
+the System V ABI.  You are also welcome to make use of AsmGen as you
+work to solve this problem.  For example, if you think you constructed a
+program "solution.prog" that you think might, indeed, be a solution,
+then you can try compiling it with AsmGen (java AsmGen < solution.prog)
+and comparing the output in out.s with sample.s to see if it really is a
+match.  Do not expect to get everything right first time: be prepared to
+try multiple experiments, and to break the task down in to multiple
+steps, each focussed on a different section of code.
+
+Your submission for this part of the assignment should include your
+reconstructed version of sample.prog (or as close as you are able to
+get) [8 points], as well as a copy of the assembly code in sample.s
+that you have annotated with diagrams and similar items to document
+the process that you used to develop your solution [4 points].
+
+In addition, you should also address the following in your answer,
+labeling these items very clearly to ensure that they are easy to find
+and identify:
+
+- Explain how the original source program might differ from what you
+  have been able to reconstruct in ways that are impossible for you to
+  determine using only the code in sample.s? [3 points]
+
+- Identify three different examples of poor code quality in the assembly
+  code for sample.s, and show that you are able to improve on this
+  machine generated code by making (and testing) small patches to fix
+  those issues. [5 points]
+
+[And if you're wondering how I might be able to grade this assignment
+without access to a copy of the original sample.prog: don't worry, I'm
+sure will be able to find a copy by then in one of my backups ... :-) ]
+
+Minimum passing grade:
+----------------------
+You will need to receive at least 15 points, with 5 or more points
+in at least two of the three questions, to satisfy the minimum grade
+requirement (i.e., to avoid an F or X for this assignment).
+
+------------------------------------------------------------------------

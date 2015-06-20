@@ -1,0 +1,134 @@
+------------------------------------------------------------------------
+README for Homework 2:
+------------------------------------------------------------------------
+
+You can use the files in this directory to test your assembly
+language programs.  I have tested these files on two platforms:
+
+  Linux (Ubuntu, on the linuxlab.cs.pdx.edu machines)
+  Mac OS X (Intel)
+
+They should also work easily on other platforms, including other
+versions of Linux, or other Unix-like operating systems such as
+FreeBSD, OpenBSD, or NetBSD.  Note, however, that they all rely on
+the use of an x86-64 compatible processor, so they will NOT run
+correctly on a machine that uses a different kind of processor such
+as a Sparc (e.g., the departmental cs.pdx.edu Solaris machines) or a
+PowerPC (e.g., an older, pre-Intel Mac).  In principle, it should
+also be possible to get these files to work on a recent (64-bit)
+version of Windows, although I have not tried this.
+
+If you have the appropriate tools installed (see below for platform
+specific details), you should be able to compile the code in this
+directory using one of the following lines, depending on the
+platform that you use:
+
+  gcc -o main main.c linux.s   (on a Linux machine)
+  gcc -o main main.c mac.s     (on an Intel Mac)
+
+Now you can run the compiled binary using the following command
+line:
+
+  ./main
+
+(Don't forget the leading ./ part, just in case you have a path
+setting that doesn't include the current directory!)  This test
+program should display a simple "result is 42" message and then
+exit.
+
+When you are ready to start writing and testing your own code, you
+should look for the following code in whichever .s file you are
+using:
+
+  ### This is where your code begins ...
+  
+          movl    $42, %eax     # replace this with your code!
+  
+  ### This is where your code ends ...
+
+As the comments suggest, you should put your code here!  You can
+assume that the registers rdi and rsi have been initialized to
+contain the start addresses of the first and second arrays,
+respectively, at the top of this code, and you should ensure that
+you have loaded the final result into the eax register at the end.
+
+If you need to use more than just these registers in your code (and
+you almost certainly will!), then you should use the following
+guidelines:
+
+-  The input parameters are in the registers rdi, rsi.  You are free
+   to use these registers for other purposes too, provided of course
+   that you have reached a point in the code where their value are
+   not needed (or you have saved their contents in other registers).
+
+-  The output result should be in the register eax.  You are welcome
+   to use this register for other purposes in your code, so long as
+   you ensure that it contains the intended result value at the end
+   of the code.
+
+-  The following registers can be freely used: rdx, rcx, r8, r9, r10,
+   and r11.
+
+-  Your code should not change the values in any of the rbx, rbp,
+   r12, r13, r14, or r15 registers.  Or, at least, you should take
+   appropriate steps to save the values of these registers before
+   you use them so that you can restore them to their original
+   values at the end of your code.  For the purposes of this
+   homework assignment, you will almost certainly not need to use
+   any of these registers.
+
+-  The rsp register holds the stack pointer and should not be used
+   for other purposes.
+
+Also remember that each of the registers named above holds a 64 bit
+value, which is appropriate when we're working with pointers or
+addresses or 64 bit integers.  For much of the work that we'll do
+here, however, we'll be using C integers, which are 32 bits wide.
+Fortunately, it is easy to use each of the general purpose registers
+(rax, rsi, rdx, rcx, etc.) as if they were 32-bit registers instead
+(eax, esi, edx, ecx, etc.).  In other words, we replace the "r"
+prefix on each 64 bit register name with an "e" to get the name of
+the corresponding 32-bit register.  Remember also that instructions
+producing 32-bit results typically add an "l" (for "long") suffix,
+while those producing 64-bit results typically add a "q" suffix.
+Thus, you will see instructions like "movl %eax,%edx" to copy the
+value from register eax into register edx, but an instruction like
+"movq %rdi,%rdx" is needed to copy the value from rdi into rdx.
+
+Once you have the basic example working, I would encourage you to
+create a separate .s file for each part of the question so that you
+can compare and reuse code from each answer without having to
+comment out multiple versions in a single file or, worse still,
+overwriting your answer to one part with the answer to another.  Of
+course, you'll have to use a different command line to gcc after
+that to include the name of the new .s file.
+
+
+Platform Specific Notes:
+
+Departmental Machines: Unless you have a strong preference or need
+to use your own machine for this homework, I encourage you to
+consider using the departmental machines in the Linux lab.  Just
+login in to linuxlab.cs.pdx.edu to access these machines; they
+already have the appropriate versions of the tools installed, so you
+don't need to do anything extra yourself!
+
+If you are keen, for whatever reason, to do this homework using your
+own machine, then I hope that the following instructions will help
+to get you up and running on Linux or Mac OS X (Intel).
+
+Linux: Most linux installations already have the necessary packages
+installed, but if you don't have gcc, then you will need to install
+it using whatever tools you normally use to add packages; this
+varies from one distribution to the next so I'm afraid I can't help
+with more specifics.
+
+Mac OS X: You'll need an Intel-based Mac for this work, with access
+to the App Store so that you can download the (free) XCode developer
+tools that are required.  I think that the latest versions of XCode
+automatically install the necessary command line tools, but if not
+then you may need to take extra steps to ensure that these are
+available.
+
+Good luck, and have fun!!
+------------------------------------------------------------------------

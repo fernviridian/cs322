@@ -1,0 +1,155 @@
+-----------------------------------------------------------------------
+CS322 Languages and Compiler Design II                       Homework 1
+-----------------------------------------------------------------------
+
+This homework assignment is due on Monday, April 20.  You may
+submit your solution in one of two ways:
+
+- By uploading a single pdf or text file to the D2L dropbox by 3pm
+  that afternoon.  OTHER FILE FORMATS WILL NOT BE ACCEPTED, so
+  please do not submit a document in another format such as Word,
+  OpenOffice, or Pages, and do not submit source or executable
+  code or zip/tar/etc. archive files.
+
+- By turning in a solution on paper (handwritten, printed, or a
+  combination of the two) at the start of the lecture (4:40pm)
+  on that day.
+
+You should use the materials from the demonstration compiler,
+DemoComp, as your primary resource for this assignment.  The
+DemoComp source code is available from the Week 2 section of the
+Course Content on D2L, and includes the As, Ps, Is, and B folders
+from the Interpretour, as well as the At, Pt, It, and C folders
+from the Week 2 lecture.  In particular, you should use the code
+in the C folder as your starting point for this assignment.  The
+DemoComp.zip file contains additional directories (such as Demo
+and BDemo) but you can safely ignore those for the purposes of
+this assignment; they are not required here.
+
+Although I am assuming that you have completed the Interpretour
+prior to starting this assignment, you will not need to include
+any code from the DT, Nest, Proc, Ref, or FCF steps of that lab
+for this assignment.
+
+The maximum possible score for this assignment is 50 points.
+Students must receive at least 10 points to satisfy the minimum
+grading requirement for this assignment (as specified in the
+course syllabus).
+
+
+Question 1: [25 points]
+-----------
+Modify the DemoComp compiler to include support for the following
+constructs in the source language.  You are welcome/encouraged to
+extend or modify the target language implementation also if you
+find that it is useful to do so.  For example, it may be easier to
+compile some constructs in the source language if you add a new
+instruction in the target language.
+
+- A multiplication operator that takes two integer arguments and
+  returns their product (another integer) as its result.  [Hint:
+  you have already done something very similar to this in the
+  Warmup stage of the Interpretour; the key extension here will be
+  to add a suitable implementation of the compileTo() method for
+  your Mult class.] DONE
+
+- A not operator that takes a single Boolean argument and returns
+  its inverse as a result (i.e., mapping true to false and false
+  to true). DONE
+
+- A less than or equal operator, <=, that operates on two integer
+  arguments and returns a Boolean result.  [Hint: you can
+  implement this easily without having to modify the target
+  language ...] DONE
+
+- An even operator that takes a single integer argument and
+  returns a Boolean that is true if, and only if , the input
+  argument is an even number.   For example, even(2) and even(7)
+  would return true and false, respectively. 
+
+- A halve operator that takes an integer argument and returns an
+  integer result that is the result of dividing the input value by
+  two.  For example, halve(2) and halve(7) would return 1 and 3,
+  respectively.
+
+In each case, you are encouraged to build up your solution by
+following the pattern that was illustrated in lectures: start by
+defining the abstract syntax class, then add code for printing,
+evalation/execution, and compilation.  Your answer should explain
+any changes and additions that you make at each stage, and it
+should provide evidence of thoughtful testing.  ("Thoughtful
+testing" does not require the use of a large test suite, but
+instead relies on careful selection of key tests, with
+justification, and with commentary to explain how the results of
+testing help to demonstrate that the solution is correct.) You
+should include key code fragments to document your answer but full
+code listings are *not* required.  A student who submits *only*
+code listings for this part of the assignment, even if those
+implementations are (or at least appear to be) correct, will not
+likely receive full points for this part of the assignment.
+
+Question 2: [10 points]
+-----------
+Consider the following program, written using a hypothetical concrete
+syntax for the DemoComp compiler’s source language.
+
+    t = 0; x = 6; y = 7;
+    while (0<x) {
+      if (not(even(x))) {
+        t = t + y;
+      } else {
+        t = t;
+      }
+      y = y + y;
+      x = halve(x);
+    }
+    print t;
+
+In this code, we have written not(e), even(e) and halve(e) as
+concrete syntax for uses of the corresponding operators defined in
+Question 1, each with an argument e.
+
+Draw a diagram that shows the abstract syntax for the body of the
+while loop in this code fragment.  Write a Java program, following
+the pattern in the original Main class, that:
+
+- constructs the abstract syntax tree for the full program above;
+
+DONE
+
+- executes it directly using the source language interpreter;
+
+- translates it into the target language, printing out the result;
+  and
+
+- executes the resulting target code.
+
+Use the output from the compiler to confirm both that you have
+constructed the correct abstract syntax tree and that the
+resulting target program has the same semantics.   [Do not be
+surprised if you are able to reuse much of the code that has
+already been provided.]
+
+[P.S.  For fun, not credit: What does the program above actually
+do?  What testing strategy could you use to confirm this?]
+
+Question 3: [15 points]
+-----------
+Study the target code that your modified version of DemoComp
+produces for the program that was shown in Question 2.  Identify
+three distinct ways in which you think that code might reasonably
+be improved by the use of a more sophisticated code generator
+and/or optimizer.  [If you can see more than three possible
+answers, pick the three that you think are most interesting and/or
+most likely to be useful in practice.]
+
+Three ways of impovement:
+
+-r12 <- 0
+  [t] <- r12
+  assigns are inefficient
+- 
+
+-mult/divide bit shift instead of doing expensive integer mult/div
+
+-----------------------------------------------------------------------
